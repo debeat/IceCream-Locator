@@ -52,7 +52,7 @@ class IceCream
   def find_places(origin)
     places_params = {
       :query => "ice cream in #{origin}",
-      :key => "AIzaSyAYwOWLmSN4FoA7x5G4ROGYle3V7UijuLo",
+      :key => "Your Key Here",
       :sensor => false
     }
 
