@@ -5,35 +5,50 @@ require 'rest-client'
 require 'yaml'
 
 class IceCream
+  attr_accessor :origin, :places, :destination, :directions
 
   def initialize
   end
 
   def run
-    origin = get_origin
-
-    places = find_places(origin)
-
-    destination = choose_destination(places)
-
-    directions = find_directions(origin, destination)
-
-    output_directions(directions)
+    determine_origin
+    find_nearby_shops
+    display_choices
+    select_shop
+    find_directions_to_shop
+    display_directions
   end
 
-  def choose_destination(places)
-    output_destination_choices(places)
-
-    print "Select a location (number): "
-
-    p_num = gets.chomp.to_i
-    destination = places["results"][p_num - 1]["formatted_address"]
+  def determine_origin
+    print "Enter street address (San Francisco only!): "
+    @origin = gets.chomp + ", San Francisco, CA"
   end
 
-  def find_directions(origin, destination)
+  def display_choices
+    @places["results"].each_with_index do |place, i|
+      print "#{i + 1}. #{place["name"]}:"
+      print " #{place["formatted_address"].split(",").first}"
+      puts
+    end
+  end
+
+  def display_directions
+    overall_distance = @directions["routes"][0]["legs"][0]["distance"]["text"]
+
+    puts "Overall distance: #{overall_distance}"
+
+    # steps to detination
+    @directions["routes"][0]["legs"][0]["steps"].each_with_index do |step, i|
+      print "#{i + 1}. #{Nokogiri::HTML(step["html_instructions"]).text}"
+      print " - #{step["distance"]["text"]}"
+      puts
+    end
+  end
+
+  def find_directions_to_shop
     directions_params = {
-      :origin => origin,
-      :destination => destination,
+      :origin => @origin,
+      :destination => @destination,
       :mode => 'walking',
       :sensor => false
     }
@@ -46,12 +61,12 @@ class IceCream
         ).to_s
 
     directions_response = RestClient.get(directions_endpoint)
-    directions = JSON.parse(directions_response)
+    @directions = JSON.parse(directions_response)
   end
 
-  def find_places(origin)
+  def find_nearby_shops
     places_params = {
-      :query => "ice cream in #{origin}",
+      :query => "ice cream in #{@origin}",
       :key => "Your Key Here",
       :sensor => false
     }
@@ -63,33 +78,19 @@ class IceCream
         :query_values => places_params
         ).to_s
 
-
     places_response = RestClient.get(places_endpoint)
-    places = JSON.parse(places_response)
+    @places = JSON.parse(places_response)
   end
 
-  def get_origin
-    print "Enter street address (San Francisco only!): "
-    origin = gets.chomp + ", San Francisco, CA"
+  def select_shop
+    print "Select a location (number): "
+
+    p_num = gets.chomp.to_i
+    @destination = @places["results"][p_num - 1]["formatted_address"]
   end
 
-  def output_destination_choices(places)
-    places["results"].each_with_index do |place, i|
-      puts "#{i + 1}. #{place["name"]}: #{place["formatted_address"].split(",").first}"
-    end
-  end
-
-  def output_directions(directions)
-    overall_distance = directions["routes"][0]["legs"][0]["distance"]["text"]
-
-    puts "Overall distance: #{overall_distance}"
-
-    # steps to detination
-    directions["routes"][0]["legs"][0]["steps"].each_with_index do |step, i|
-      puts "#{i + 1}. #{Nokogiri::HTML(step["html_instructions"]).text} - #{step["distance"]["text"]}"
-    end
-  end
 end
+
 
 ice = IceCream.new
 ice.run
